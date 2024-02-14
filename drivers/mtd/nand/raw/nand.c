@@ -16,7 +16,7 @@
 
 int nand_curr_device = -1;
 
-static struct mtd_info *nand_info[CONFIG_SYS_MAX_NAND_DEVICE];
+struct mtd_info *nand_info[CONFIG_SYS_MAX_NAND_DEVICE];
 
 #ifndef CONFIG_SYS_NAND_SELF_INIT
 static struct nand_chip nand_chip[CONFIG_SYS_MAX_NAND_DEVICE];
@@ -107,6 +107,7 @@ static void create_mtd_concat(void)
 
 	for (i = 0; i < CONFIG_SYS_MAX_NAND_DEVICE; i++) {
 		struct mtd_info *mtd = get_nand_dev_by_index(i);
+
 		if (mtd != NULL) {
 			nand_info_list[nand_devices_found] = mtd;
 			nand_devices_found++;
@@ -128,8 +129,6 @@ static void create_mtd_concat(void)
 
 		nand_register(nand_devices_found, mtd);
 	}
-
-	return;
 }
 #else
 static void create_mtd_concat(void)

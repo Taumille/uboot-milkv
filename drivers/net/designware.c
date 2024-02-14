@@ -282,7 +282,8 @@ static void rx_descs_init(struct dw_eth_dev *priv)
 	 * flushed into RAM.
 	 * Otherwise there's a chance to get some of them flushed in RAM when
 	 * GMAC is already pushing data to RAM via DMA. This way incoming from
-	 * GMAC data will be corrupted. */
+	 * GMAC data will be corrupted.
+	 */
 	flush_dcache_range((ulong)rxbuffs, (ulong)rxbuffs + RX_TOTAL_BUFSIZE);
 
 	for (idx = 0; idx < CONFIG_RX_DESCR_NUM; idx++) {
@@ -952,7 +953,7 @@ int designware_eth_of_to_plat(struct udevice *dev)
 static const struct udevice_id designware_eth_ids[] = {
 	{ .compatible = "allwinner,sun7i-a20-gmac" },
 	{ .compatible = "amlogic,meson6-dwmac" },
-	{ .compatible = "st,stm32-dwmac" },
+	{ .compatible = "cvitek,ethernet" },
 	{ .compatible = "snps,arc-dwmac-3.70a" },
 	{ }
 };

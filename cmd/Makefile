@@ -68,6 +68,13 @@ obj-$(CONFIG_CMD_FAT) += fat.o
 obj-$(CONFIG_CMD_FDT) += fdt.o
 obj-$(CONFIG_CMD_SQUASHFS) += sqfs.o
 obj-$(CONFIG_CMD_FLASH) += flash.o
+obj-$(CONFIG_CMD_CVI_JPEG) += cvi_jpeg.o
+obj-$(CONFIG_CMD_CVI_VO) += cvi_vo.o
+obj-$(CONFIG_CMD_CVI_UPDATE) += cvi_update.o
+obj-$(CONFIG_CMD_CVI_UPDATE) += cvi_utask.o
+obj-$(CONFIG_ENABLE_ALIOS_UPDATE) += cvi_update_rtos.o
+obj-$(CONFIG_NAND_SUPPORT) += cvi_sd_update.o cvi_sd_update_spinand_v3.o
+obj-$(CONFIG_CMD_CVI_SD_BOOT) += cvi_sd_boot.o
 obj-$(CONFIG_CMD_FPGA) += fpga.o
 obj-$(CONFIG_CMD_FPGAD) += fpgad.o
 obj-$(CONFIG_CMD_FS_GENERIC) += fs.o
@@ -199,6 +206,9 @@ obj-$(CONFIG_CMD_AVB) += avb.o
 
 # Foundries.IO SCP03
 obj-$(CONFIG_CMD_SCP03) += scp03.o
+
+obj-y += efuse.o
+obj-$(CONFIG_CMD_CVISOUND) += cvisound.o
 
 obj-$(CONFIG_ARM) += arm/
 obj-$(CONFIG_RISCV) += riscv/

@@ -78,3 +78,10 @@ obj-$(CONFIG_RENESAS_SDHI)		+= tmio-common.o renesas-sdhi.o
 obj-$(CONFIG_MMC_BCM2835)		+= bcm2835_sdhost.o
 obj-$(CONFIG_MMC_MTK)			+= mtk-sd.o
 obj-$(CONFIG_MMC_SDHCI_F_SDH30)		+= f_sdh30.o
+ifeq ($(CONFIG_MMC_SDHCI_CVITEK), y)
+obj-$(CONFIG_TARGET_CVITEK_CV1835) += cvitek/sdhci-cv183x.o
+obj-$(CONFIG_TARGET_CVITEK_CV1822) += cvitek/sdhci-cv182x.o
+obj-$(CONFIG_TARGET_CVITEK_CV181X) += cvitek/sdhci-mars.o
+obj-$(CONFIG_TARGET_CVITEK_CV180X) += cvitek/sdhci-phobos.o
+obj-$(CONFIG_TARGET_CVITEK_ATHENA2) += cvitek/sdhci-athena2.o
+endif

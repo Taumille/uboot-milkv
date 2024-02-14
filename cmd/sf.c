@@ -127,9 +127,8 @@ static int do_spi_flash_probe(int argc, char *const argv[])
 #if CONFIG_IS_ENABLED(DM_SPI_FLASH)
 	/* Remove the old device, otherwise probe will just be a nop */
 	ret = spi_find_bus_and_cs(bus, cs, &bus_dev, &new);
-	if (!ret) {
+	if (!ret)
 		device_remove(new, DM_REMOVE_NORMAL);
-	}
 	flash = NULL;
 	ret = spi_flash_probe_bus_cs(bus, cs, speed, mode, &new);
 	if (ret) {
@@ -172,6 +171,7 @@ static const char *spi_flash_update_block(struct spi_flash *flash, u32 offset,
 		size_t len, const char *buf, char *cmp_buf, size_t *skipped)
 {
 	char *ptr = (char *)buf;
+	u8 *tmp = NULL;
 
 	debug("offset=%#x, sector_size=%#x, len=%#zx\n",
 	      offset, flash->sector_size, len);
@@ -190,6 +190,10 @@ static const char *spi_flash_update_block(struct spi_flash *flash, u32 offset,
 		return "erase";
 	/* If it's a partial sector, copy the data into the temp-buffer */
 	if (len != flash->sector_size) {
+		for (int i = 0; i < flash->sector_size; i++) {
+			tmp = (u8 *)cmp_buf;
+			tmp[i] = 0xff;
+		}
 		memcpy(cmp_buf, buf, len);
 		ptr = cmp_buf;
 	}
@@ -268,6 +272,10 @@ static int do_spi_flash_read_write(int argc, char *const argv[])
 	int ret = 1;
 	int dev = 0;
 	loff_t offset, len, maxsize;
+	ulong start;
+	int temp = 0;
+
+	start = get_timer(0);
 
 	if (argc < 3)
 		return -1;
@@ -312,6 +320,9 @@ static int do_spi_flash_read_write(int argc, char *const argv[])
 		else
 			printf("OK\n");
 	}
+
+	temp = len / get_timer(start);
+	printf("sf %s speed %d.%d MB/s\n", argv[0], temp / 1000, (temp - (temp / 1000) * 1000));
 
 	unmap_physmem(buf, len);
 
@@ -404,8 +415,8 @@ static char *stage_name[STAGE_COUNT] = {
 struct test_info {
 	int stage;
 	int bytes;
-	unsigned base_ms;
-	unsigned time_ms[STAGE_COUNT];
+	unsigned int base_ms;
+	unsigned int time_ms[STAGE_COUNT];
 };
 
 static void show_time(struct test_info *test, int stage)

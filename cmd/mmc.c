@@ -13,6 +13,8 @@
 #include <part.h>
 #include <sparse_format.h>
 #include <image-sparse.h>
+#include <div64.h>
+#include <linux/math64.h>
 
 static int curr_device = -1;
 
@@ -23,7 +25,7 @@ static void print_mmcinfo(struct mmc *mmc)
 	printf("Device: %s\n", mmc->cfg->name);
 	printf("Manufacturer ID: %x\n", mmc->cid[0] >> 24);
 	printf("OEM: %x\n", (mmc->cid[0] >> 8) & 0xffff);
-	printf("Name: %c%c%c%c%c \n", mmc->cid[0] & 0xff,
+	printf("Name: %c%c%c%c%c\n", mmc->cid[0] & 0xff,
 			(mmc->cid[1] >> 24), (mmc->cid[1] >> 16) & 0xff,
 			(mmc->cid[1] >> 8) & 0xff, mmc->cid[1] & 0xff);
 
@@ -57,6 +59,7 @@ static void print_mmcinfo(struct mmc *mmc)
 	if (!IS_SD(mmc) && mmc->version >= MMC_VERSION_4_41) {
 		bool has_enh = (mmc->part_support & ENHNCD_SUPPORT) != 0;
 		bool usr_enh = has_enh && (mmc->part_attr & EXT_CSD_ENH_USR);
+
 		ALLOC_CACHE_ALIGN_BUFFER(u8, ext_csd, MMC_MAX_BLOCK_LEN);
 		u8 wp;
 		int ret;
@@ -125,6 +128,7 @@ static struct mmc *__init_mmc_device(int dev, bool force_init,
 				     enum bus_mode speed_mode)
 {
 	struct mmc *mmc;
+
 	mmc = find_mmc_device(dev);
 	if (!mmc) {
 		printf("no mmc device at slot %x\n", dev);
@@ -145,6 +149,7 @@ static struct mmc *__init_mmc_device(int dev, bool force_init,
 
 #ifdef CONFIG_BLOCK_CACHE
 	struct blk_desc *bd = mmc_get_blk_desc(mmc);
+
 	blkcache_invalidate(bd->if_type, bd->devnum);
 #endif
 
@@ -341,6 +346,7 @@ static int do_mmc_read(struct cmd_tbl *cmdtp, int flag,
 	struct mmc *mmc;
 	u32 blk, cnt, n;
 	void *addr;
+	ulong start_time, delta;
 
 	if (argc != 4)
 		return CMD_RET_USAGE;
@@ -355,9 +361,17 @@ static int do_mmc_read(struct cmd_tbl *cmdtp, int flag,
 
 	printf("\nMMC read: dev # %d, block # %d, count %d ... ",
 	       curr_device, blk, cnt);
-
+	start_time = get_timer(0);
 	n = blk_dread(mmc_get_blk_desc(mmc), blk, cnt, addr);
-	printf("%d blocks read: %s\n", n, (n == cnt) ? "OK" : "ERROR");
+	delta = get_timer(start_time);
+	printf("%d blocks read: %s in %lu ms", n, (n == cnt) ? "OK" : "ERROR", delta);
+
+	if (delta > 0) {
+		puts(" (");
+		print_size(div_u64(n * 512, delta) * 1000, "/s");
+		puts(")");
+	}
+	puts("\n");
 
 	return (n == cnt) ? CMD_RET_SUCCESS : CMD_RET_FAILURE;
 }
@@ -434,6 +448,7 @@ static int do_mmc_write(struct cmd_tbl *cmdtp, int flag,
 	struct mmc *mmc;
 	u32 blk, cnt, n;
 	void *addr;
+	ulong start_time, delta;
 
 	if (argc != 4)
 		return CMD_RET_USAGE;
@@ -453,8 +468,16 @@ static int do_mmc_write(struct cmd_tbl *cmdtp, int flag,
 		printf("Error: card is write protected!\n");
 		return CMD_RET_FAILURE;
 	}
+	start_time = get_timer(0);
 	n = blk_dwrite(mmc_get_blk_desc(mmc), blk, cnt, addr);
-	printf("%d blocks written: %s\n", n, (n == cnt) ? "OK" : "ERROR");
+	delta = get_timer(start_time);
+	printf("%d blocks written: %s in %lu ms", n, (n == cnt) ? "OK" : "ERROR", delta);
+	if (delta > 0) {
+		puts(" (");
+		print_size(div_u64(n * 512, delta) * 1000, "/s");
+		puts(")");
+	}
+	puts("\n");
 
 	return (n == cnt) ? CMD_RET_SUCCESS : CMD_RET_FAILURE;
 }
@@ -464,6 +487,7 @@ static int do_mmc_erase(struct cmd_tbl *cmdtp, int flag,
 {
 	struct mmc *mmc;
 	u32 blk, cnt, n;
+	ulong start_time, delta;
 
 	if (argc != 3)
 		return CMD_RET_USAGE;
@@ -482,8 +506,16 @@ static int do_mmc_erase(struct cmd_tbl *cmdtp, int flag,
 		printf("Error: card is write protected!\n");
 		return CMD_RET_FAILURE;
 	}
+	start_time = get_timer(0);
 	n = blk_derase(mmc_get_blk_desc(mmc), blk, cnt);
-	printf("%d blocks erased: %s\n", n, (n == cnt) ? "OK" : "ERROR");
+	delta = get_timer(start_time);
+	printf("%d blocks erased: %s in %lu ms ", n, (n == cnt) ? "OK" : "ERROR", delta);
+	if (delta > 0) {
+		puts(" (");
+		print_size(div_u64(n * 512, delta) * 1000, "/s");
+		puts(")");
+	}
+	puts("\n");
 
 	return (n == cnt) ? CMD_RET_SUCCESS : CMD_RET_FAILURE;
 }
@@ -585,6 +617,30 @@ static int do_mmc_dev(struct cmd_tbl *cmdtp, int flag,
 	return CMD_RET_SUCCESS;
 }
 
+static int do_mmc_fuse_rstn(struct cmd_tbl *cmdtp, int flag,
+			    int argc, char *const argv[])
+{
+	int dev, ret;
+	struct mmc *mmc;
+
+	if (argc == 2) {
+		dev = (int)dectoul(argv[1], NULL);
+		mmc = init_mmc_device(dev, true);
+	} else {
+		return CMD_RET_USAGE;
+	}
+
+	if (!mmc)
+		return CMD_RET_FAILURE;
+
+	ret = mmc_switch(mmc, EXT_CSD_CMD_SET_NORMAL, EXT_CSD_RST_N_FUNCTION, 0x1);
+	printf("Set RST_N = 0x1 ret: %d\n", ret);
+	if (ret)
+		return 1;
+
+	return CMD_RET_SUCCESS;
+}
+
 static int do_mmc_list(struct cmd_tbl *cmdtp, int flag,
 		       int argc, char *const argv[])
 {
@@ -634,7 +690,7 @@ static int parse_hwpart_gp(struct mmc_hwpart_conf *pconf, int pidx,
 
 	memset(&pconf->gp_part[pidx], 0, sizeof(pconf->gp_part[pidx]));
 
-	if (1 >= argc)
+	if (argc <= 1)
 		return -1;
 	pconf->gp_part[pidx].size = dectoul(argv[0], NULL);
 
@@ -734,8 +790,7 @@ static int do_mmc_hwpartition(struct cmd_tbl *cmdtp, int flag,
 
 	if (!mmc_hwpart_config(mmc, &pconf, mode)) {
 		if (mode == MMC_HWPART_CONF_COMPLETE)
-			puts("Partitioning successful, "
-			     "power-cycle to make effective\n");
+			puts("Partitioning successful, power-cycle to make effective\n");
 		return CMD_RET_SUCCESS;
 	} else {
 		puts("Failed!\n");
@@ -854,7 +909,7 @@ static int mmc_partconf_print(struct mmc *mmc, const char *varname)
 	ack = EXT_CSD_EXTRACT_BOOT_ACK(mmc->part_config);
 	part = EXT_CSD_EXTRACT_BOOT_PART(mmc->part_config);
 
-	if(varname)
+	if (varname)
 		env_set_hex(varname, part);
 
 	printf("EXT_CSD[179], PARTITION_CONFIG:\n"
@@ -1019,6 +1074,7 @@ static struct cmd_tbl cmd_mmc[] = {
 	U_BOOT_CMD_MKENT(rescan, 2, 1, do_mmc_rescan, "", ""),
 	U_BOOT_CMD_MKENT(part, 1, 1, do_mmc_part, "", ""),
 	U_BOOT_CMD_MKENT(dev, 4, 0, do_mmc_dev, "", ""),
+	U_BOOT_CMD_MKENT(fuse_rstn, 2, 0, do_mmc_fuse_rstn, "", ""),
 	U_BOOT_CMD_MKENT(list, 1, 1, do_mmc_list, "", ""),
 #if CONFIG_IS_ENABLED(MMC_HW_PARTITIONING)
 	U_BOOT_CMD_MKENT(hwpartition, 28, 0, do_mmc_hwpartition, "", ""),

@@ -43,6 +43,7 @@ extern int board_nand_init(struct nand_chip *nand);
 #endif
 
 extern int nand_curr_device;
+extern struct mtd_info *nand_info[];
 
 static inline int nand_read(struct mtd_info *info, loff_t ofs, size_t *len,
 			    u_char *buf)
@@ -84,10 +85,8 @@ struct nand_erase_options {
 	loff_t length;		/* number of bytes to erase */
 	loff_t offset;		/* first address in NAND to erase */
 	int quiet;		/* don't display progress messages */
-	int jffs2;		/* if true: format for jffs2 usage
-				 * (write appropriate cleanmarker blocks) */
-	int scrub;		/* if true, really clean NAND by erasing
-				 * bad blocks (UNSAFE) */
+	int jffs2;		/* if true: format for jffs2 usage (write appropriate cleanmarker blocks) */
+	int scrub;		/* if true, really clean NAND by erasing bad blocks (UNSAFE) */
 
 	/* Don't include skipped bad blocks in size to be erased */
 	int spread;
@@ -97,6 +96,7 @@ struct nand_erase_options {
 
 typedef struct nand_erase_options nand_erase_options_t;
 
+int nand_read_device_id(struct mtd_info *mtd);
 int nand_read_skip_bad(struct mtd_info *mtd, loff_t offset, size_t *length,
 		       size_t *actual, loff_t lim, u_char *buffer);
 
@@ -132,10 +132,8 @@ void board_nand_select_device(struct nand_chip *nand, int chip);
 __attribute__((noreturn)) void nand_boot(void);
 
 #ifdef CONFIG_ENV_OFFSET_OOB
-#define ENV_OOB_MARKER 0x30425645 /*"EVB0" in little-endian -- offset is stored
-				    as block number*/
-#define ENV_OOB_MARKER_OLD 0x30564e45 /*"ENV0" in little-endian -- offset is
-					stored as byte number */
+#define ENV_OOB_MARKER 0x30425645 /*"EVB0" in little-endian -- offset is stored as block number*/
+#define ENV_OOB_MARKER_OLD 0x30564e45 /*"ENV0" in little-endian -- offset is stored as byte number */
 #define ENV_OFFSET_SIZE 8
 int get_nand_env_oob(struct mtd_info *mtd, unsigned long *result);
 #endif
@@ -152,5 +150,7 @@ void sunxi_nand_init(void);
  * returns pointer to the nand device info structure or NULL on failure.
  */
 struct mtd_info *get_nand_dev_by_index(int dev);
+
+void bbt_dump_buf(char *s, void *buf, int len);
 
 #endif /* _NAND_H_ */

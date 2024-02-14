@@ -672,7 +672,7 @@ xyzModem_stream_terminate (bool abort, int (*getc) (void))
 }
 
 char *
-xyzModem_error (int err)
+xyz_modem_error (int err)
 {
   switch (err)
     {

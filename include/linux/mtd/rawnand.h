@@ -184,6 +184,8 @@ enum nand_ecc_algo {
  * Option constants for bizarre disfunctionality and real
  * features.
  */
+/* Chip can not auto increment pages */
+#define NAND_NO_AUTOINCR    0x00000001
 /* Buswidth is 16 bit */
 #define NAND_BUSWIDTH_16	0x00000002
 /* Device supports partial programming without padding */
@@ -250,6 +252,11 @@ enum nand_ecc_algo {
  * kmap'ed, vmalloc'ed highmem buffers being passed from upper layers
  */
 #define NAND_USE_BOUNCE_BUFFER	0x00100000
+
+/*
+ * Some devices only support 1 bit transfer mode
+ */
+#define NAND_ONLY_ONE_BIT_MODE	0x10000000
 
 /* Options set by nand scan */
 /* bbt has already been read */
@@ -903,9 +910,9 @@ struct nand_chip {
 	int (*block_markbad)(struct mtd_info *mtd, loff_t ofs);
 	void (*cmd_ctrl)(struct mtd_info *mtd, int dat, unsigned int ctrl);
 	int (*dev_ready)(struct mtd_info *mtd);
-	void (*cmdfunc)(struct mtd_info *mtd, unsigned command, int column,
+	void (*cmdfunc)(struct mtd_info *mtd, unsigned int command, int column,
 			int page_addr);
-	int(*waitfunc)(struct mtd_info *mtd, struct nand_chip *this);
+	int (*waitfunc)(struct mtd_info *mtd, struct nand_chip *this);
 	int (*erase)(struct mtd_info *mtd, int page);
 	int (*scan_bbt)(struct mtd_info *mtd);
 	int (*write_page)(struct mtd_info *mtd, struct nand_chip *chip,
@@ -945,7 +952,7 @@ struct nand_chip {
 	int jedec_version;
 	struct nand_onfi_params	onfi_params;
 	struct nand_jedec_params jedec_params;
- 
+
 	struct nand_data_interface *data_interface;
 
 	int read_retries;
@@ -1105,7 +1112,7 @@ struct nand_flash_dev {
  * struct nand_manufacturers - NAND Flash Manufacturer ID Structure
  * @name:	Manufacturer name
  * @id:		manufacturer ID code of device.
-*/
+ */
 struct nand_manufacturers {
 	int id;
 	char *name;
@@ -1124,8 +1131,8 @@ int nand_do_read(struct mtd_info *mtd, loff_t from, size_t len,
 			size_t *retlen, uint8_t *buf);
 
 /*
-* Constants for oob configuration
-*/
+ * Constants for oob configuration
+ */
 #define NAND_SMALL_BADBLOCK_POS		5
 #define NAND_LARGE_BADBLOCK_POS		0
 

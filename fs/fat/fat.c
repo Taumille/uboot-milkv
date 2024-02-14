@@ -129,7 +129,7 @@ static void get_name(dir_entry *dirent, char *s_name)
 	while (*ptr && *ptr != ' ')
 		ptr++;
 	if (dirent->lcase & CASE_LOWER_BASE)
-		downcase(s_name, (unsigned)(ptr - s_name));
+		downcase(s_name, (unsigned int)(ptr - s_name));
 	if (dirent->nameext.ext[0] && dirent->nameext.ext[0] != ' ') {
 		*ptr++ = '.';
 		memcpy(ptr, dirent->nameext.ext, 3);
@@ -148,7 +148,7 @@ static void get_name(dir_entry *dirent, char *s_name)
 
 static int flush_dirty_fat_buffer(fsdata *mydata);
 
-#if !CONFIG_IS_ENABLED(FAT_WRITE)
+#if !defined(CONFIG_FAT_WRITE)
 /* Stub for read only operation */
 int flush_dirty_fat_buffer(fsdata *mydata)
 {
@@ -251,11 +251,10 @@ get_cluster(fsdata *mydata, __u32 clustnum, __u8 *buffer, unsigned long size)
 	__u32 startsect;
 	int ret;
 
-	if (clustnum > 0) {
+	if (clustnum > 0)
 		startsect = clust_to_sect(mydata, clustnum);
-	} else {
+	else
 		startsect = mydata->rootdir_sect;
-	}
 
 	debug("gc - clustnum: %d, startsect: %d\n", clustnum, startsect);
 
@@ -610,7 +609,7 @@ static int get_fs_info(fsdata *mydata)
 					(mydata->clust_size * 2);
 		mydata->root_cluster = bs.root_cluster;
 	} else {
-		mydata->rootdir_size = ((bs.dir_entries[1]  * (int)256 +
+		mydata->rootdir_size = ((bs.dir_entries[1]  * 256 +
 					 bs.dir_entries[0]) *
 					 sizeof(dir_entry)) /
 					 mydata->sect_size;
@@ -777,7 +776,7 @@ static int fat_itr_root(fat_itr *itr, fsdata *fsdata)
 static void fat_itr_child(fat_itr *itr, fat_itr *parent)
 {
 	fsdata *mydata = parent->fsdata;  /* for silly macros */
-	unsigned clustnum = START(parent->dent);
+	unsigned int clustnum = START(parent->dent);
 
 	assert(fat_itr_isdir(parent));
 
@@ -826,8 +825,9 @@ void *fat_next_cluster(fat_itr *itr, unsigned int *nbytes)
 		 * cluster boundary at all), so consider itr->next_clust to be
 		 * a offset in cluster-sized units from the start of rootdir.
 		 */
-		unsigned sect_offset = itr->next_clust * itr->fsdata->clust_size;
-		unsigned remaining_sects = itr->fsdata->rootdir_size - sect_offset;
+		unsigned int sect_offset = itr->next_clust * itr->fsdata->clust_size;
+		unsigned int remaining_sects = itr->fsdata->rootdir_size - sect_offset;
+
 		sect = itr->fsdata->rootdir_sect + sect_offset;
 		/* do not read past the end of rootdir */
 		read_size = min_t(u32, itr->fsdata->clust_size,
@@ -878,7 +878,7 @@ void *fat_next_cluster(fat_itr *itr, unsigned int *nbytes)
 static dir_entry *next_dent(fat_itr *itr)
 {
 	if (itr->remaining == 0) {
-		unsigned nbytes;
+		unsigned int nbytes;
 		struct dir_entry *dent = fat_next_cluster(itr, &nbytes);
 
 		/* have we reached the last cluster? */
@@ -1057,7 +1057,7 @@ static int fat_itr_isdir(fat_itr *itr)
  * @type: bitmask of allowable file types
  * @return 0 on success or -errno
  */
-static int fat_itr_resolve(fat_itr *itr, const char *path, unsigned type)
+static int fat_itr_resolve(fat_itr *itr, const char *path, unsigned int type)
 {
 	const char *next;
 
@@ -1102,7 +1102,7 @@ static int fat_itr_resolve(fat_itr *itr, const char *path, unsigned type)
 
 	while (fat_itr_next(itr)) {
 		int match = 0;
-		unsigned n = max(strlen(itr->name), (size_t)(next - path));
+		unsigned int n = max(strlen(itr->name), (size_t)(next - path));
 
 		/* check both long and short name: */
 		if (!strncasecmp(path, itr->name, n))
@@ -1371,6 +1371,7 @@ int fat_readdir(struct fs_dir_stream *dirs, struct fs_dirent **dentp)
 void fat_closedir(struct fs_dir_stream *dirs)
 {
 	fat_dir *dir = (fat_dir *)dirs;
+
 	free(dir->fsdata.fatbuf);
 	free(dir);
 }
