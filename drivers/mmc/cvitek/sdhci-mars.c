@@ -155,7 +155,7 @@ static void cvi_sdio0_pad_function(bool bunplug)
 	u8 val = (bunplug) ? 0x3 : 0x0;
 
 	mmio_write_32(PAD_SDIO0_CD_REG, 0x0);
-	mmio_write_32(PAD_SDIO0_PWR_EN_REG, 0x0);
+	//mmio_write_32(PAD_SDIO0_PWR_EN_REG, 0x0);
 	mmio_write_32(PAD_SDIO0_CLK_REG, val);
 	mmio_write_32(PAD_SDIO0_CMD_REG, val);
 	mmio_write_32(PAD_SDIO0_D0_REG, val);

@@ -14,7 +14,7 @@ ifneq ($(EXT_DTB),)
 DTB := $(EXT_DTB)
 else
 #DTB := arch/$(ARCH)/dts/$(DEVICE_TREE).dtb
-DTB := arch/$(ARCH)/dts/$(CHIP)_$(CVIBOARD).dtb
+DTB := arch/$(ARCH)/dts/sg2002_licheervnano_sd.dtb
 endif
 
 $(obj)/dt-$(SPL_NAME).dtb: dts/dt.dtb $(objtree)/tools/fdtgrep FORCE
