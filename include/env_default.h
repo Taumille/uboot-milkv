@@ -34,9 +34,7 @@ const uchar default_environment[] = {
 #ifdef	CONFIG_USE_BOOTARGS
 	"bootargs="	CONFIG_BOOTARGS			"\0"
 #endif
-#ifdef	CONFIG_BOOTCOMMAND
-	"bootcmd="	CONFIG_BOOTCOMMAND		"\0"
-#endif
+	"bootcmd=load mmc 0:2 0xc2000000 boot/Image;load mmc 0:2 0xc6000000 boot/sg2002-trr.dtb;booti 0xc2000000 - 0xc6000000\0"
 #ifdef	CONFIG_RAMBOOTCOMMAND
 	"ramboot="	CONFIG_RAMBOOTCOMMAND		"\0"
 #endif
